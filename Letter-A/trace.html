@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Letter Tracing Fun</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@700&display=swap" rel="stylesheet">
     <style>
@@ -34,7 +35,7 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 35vmin; /* Responsive font size based on viewport */
+            font-size: 50vmin; /* Increased responsive font size */
             color: #e5e7eb; /* gray-200 */
             z-index: 5;
             pointer-events: none; /* Allows drawing over the letter */
@@ -45,6 +46,9 @@
         }
         .nav-button:active {
             transform: scale(0.9);
+        }
+        #completion-message {
+            transition: opacity 0.5s ease-in-out;
         }
     </style>
 </head>
@@ -75,6 +79,9 @@
         <main class="flex-grow w-full">
             <div class="canvas-container bg-white border-8 border-gray-300 shadow-inner">
                 <span id="trace-letter-bg" class="trace-letter">a</span>
+                <div id="completion-message" class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 opacity-0 pointer-events-none z-20">
+                    <p class="text-white text-4xl font-bold">Great Job!</p>
+                </div>
                 <canvas id="tracing-canvas"></canvas>
             </div>
         </main>
@@ -90,13 +97,16 @@
             const clearButton = document.getElementById('clear-button');
             const canvasContainer = document.querySelector('.canvas-container');
             const canvas = document.getElementById('tracing-canvas');
+            const completionMessage = document.getElementById('completion-message');
             const ctx = canvas.getContext('2d');
             let isDrawing = false;
+            let hasCelebrated = false;
 
             function initialize() {
                 setupCanvas();
                 updateLetter();
                 setupEventListeners();
+                window.confetti = confetti; // Make confetti globally available
             }
 
             function setupEventListeners() {
@@ -127,6 +137,7 @@
             function updateLetter() {
                 const currentLetter = isUppercase ? 'A' : 'a';
                 traceLetterBg.textContent = currentLetter;
+                hasCelebrated = false;
                 clearCanvas();
             }
 
@@ -136,7 +147,7 @@
                 canvas.width = width;
                 canvas.height = height;
                 ctx.strokeStyle = '#f97316'; // orange-500
-                ctx.lineWidth = 20;
+                ctx.lineWidth = 30; // Thicker line for easier tracing
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
             }
@@ -164,8 +175,11 @@
 
             function stopDrawing(e) {
                 e.preventDefault();
+                if (!isDrawing) return;
                 isDrawing = false;
                 ctx.beginPath();
+
+                checkCompletion();
             }
 
             function draw(e) {
@@ -178,6 +192,60 @@
 
             function clearCanvas() {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
+                completionMessage.classList.add('opacity-0', 'pointer-events-none');
+                hasCelebrated = false;
+            }
+
+            function checkCompletion() {
+                if (hasCelebrated) return;
+
+                const letterCanvas = document.createElement('canvas');
+                letterCanvas.width = canvas.width;
+                letterCanvas.height = canvas.height;
+                const letterCtx = letterCanvas.getContext('2d', { willReadFrequently: true });
+
+                // Draw the guide letter onto the hidden canvas
+                const style = window.getComputedStyle(traceLetterBg);
+                letterCtx.font = `${style.getPropertyValue('font-size')} ${style.getPropertyValue('font-family')}`;
+                letterCtx.fillStyle = 'black';
+                letterCtx.textAlign = 'center';
+                letterCtx.textBaseline = 'middle';
+                letterCtx.fillText(traceLetterBg.textContent, canvas.width / 2, canvas.height / 2);
+
+                const letterData = letterCtx.getImageData(0, 0, canvas.width, canvas.height).data;
+                const drawingData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+
+                let totalLetterPixels = 0;
+                let coveredPixels = 0;
+
+                for (let i = 0; i < letterData.length; i += 4) {
+                    // Check if the pixel on the guide letter canvas is not transparent (i.e., it's part of the letter)
+                    if (letterData[i + 3] > 0) {
+                        totalLetterPixels++;
+                        // Check if the corresponding pixel on the drawing canvas is not transparent
+                        if (drawingData[i + 3] > 0) {
+                            coveredPixels++;
+                        }
+                    }
+                }
+
+                const coverage = totalLetterPixels > 0 ? (coveredPixels / totalLetterPixels) : 0;
+                
+                // If user covers more than 70% of the letter, celebrate!
+                if (coverage > 0.70) {
+                    celebrate();
+                    hasCelebrated = true;
+                }
+            }
+
+            function celebrate() {
+                completionMessage.classList.remove('opacity-0', 'pointer-events-none');
+                
+                confetti({
+                    particleCount: 150,
+                    spread: 90,
+                    origin: { y: 0.6 }
+                });
             }
 
             initialize();

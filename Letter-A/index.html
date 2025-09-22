@@ -10,7 +10,6 @@
     <style>
         body {
             font-family: 'Comic Neue', cursive;
-            touch-action: none; /* Prevents scrolling on canvas touch */
         }
         .letter-display {
             font-size: 10rem;
@@ -23,6 +22,7 @@
             height: 400px;
             border-radius: 1.5rem;
             overflow: hidden;
+            touch-action: none; /* Prevents scrolling ONLY on the canvas container */
         }
         #tracing-canvas {
             position: absolute;
@@ -678,15 +678,16 @@
                     item.classList.add(colors[Math.floor(Math.random() * colors.length)]);
                     item.style.transform = `rotate(${Math.random() * 40 - 20}deg) scale(${Math.random() * 0.4 + 0.8})`;
 
-                    fragment.appendChild(item);
+                    item.addEventListener('click', handleHuntClick);
+                    huntBoard.appendChild(item);
                 }
-                huntBoard.appendChild(fragment); // Append all at once
-                huntBoard.addEventListener('click', handleHuntClick);
             }
 
 
             function handleHuntClick(e) {
-                const clickedItem = e.target;
+                const clickedItem = e.target.closest('.letter-hunt-item');
+                if (!clickedItem) return; // Ignore clicks on the board background
+
                 if (clickedItem.classList.contains('found')) return;
 
                 const clickedLetter = clickedItem.dataset.letter;
@@ -710,7 +711,6 @@
                 playSound('You did it!', 1);
                 huntCompleteMessage.innerHTML = `<p class="text-2xl font-bold text-green-600">You found them all!</p><button id="play-again-btn" class="nav-button mt-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-full">Play Again</button>`;
                 huntCompleteMessage.classList.remove('hidden');
-                huntBoard.removeEventListener('click', handleHuntClick); // Clean up listener
                 document.getElementById('play-again-btn').addEventListener('click', () => startHuntGame(huntMode));
                 celebrate();
             }

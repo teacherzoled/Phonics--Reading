@@ -560,8 +560,12 @@
                 const allCards = exerciseOptions.querySelectorAll('.exercise-card');
                 allCards.forEach(c => c.style.pointerEvents = 'none');
 
-                if (selectedLetter.toLowerCase() === correctLetter.toLowerCase()) {
-                    const isFindLetterGame = !exampleName;
+                const isFindLetterGame = !exampleName;
+                // For the 'find-letter' game, we need a case-sensitive check.
+                // For other games, a case-insensitive check is fine.
+                const isCorrect = isFindLetterGame ? (selectedLetter === correctLetter) : (selectedLetter.toLowerCase() === correctLetter.toLowerCase());
+
+                if (isCorrect) {
                     const feedback = exampleName ? `${letterData.sound} for ${exampleName}!` : 'Correct!';
                     playSound(feedback, 1);
                     selectedCard.classList.add('correct');
@@ -583,7 +587,7 @@
                     selectedCard.classList.add('incorrect');
                     // Highlight the correct answer
                     allCards.forEach(c => {
-                        if (c.dataset.letter.toLowerCase() === correctLetter.toLowerCase()) {
+                        if (isFindLetterGame ? (c.dataset.letter === correctLetter) : (c.dataset.letter.toLowerCase() === correctLetter.toLowerCase())) {
                             c.classList.add('correct');
                         }
                     });
@@ -609,6 +613,9 @@
                 findCapitalsBtn.classList.remove('bg-blue-700');
                 findLowersBtn.classList.remove('bg-blue-700');
                 huntMode = null;
+                // Clean up event listener when the game is reset
+                const newBoard = huntBoard.cloneNode(true);
+                huntBoard.parentNode.replaceChild(newBoard, huntBoard);
             }
 
             function startHuntGame(mode) {
@@ -625,6 +632,12 @@
                 findCapitalsBtn.classList.toggle('bg-blue-700', mode === 'capital');
                 findLowersBtn.classList.toggle('bg-blue-700', mode === 'lower');
 
+                // Use setTimeout to allow the UI to update before heavy calculation
+                // This prevents the app from freezing on mobile when a mode is selected.
+                setTimeout(() => generateHuntBoard(mode), 0);
+            }
+
+            function generateHuntBoard(mode) {
                 const lettersToHunt = [];
                 const positions = [];
                 const totalLetters = 30;
@@ -678,11 +691,11 @@
                     item.classList.add(colors[Math.floor(Math.random() * colors.length)]);
                     item.style.transform = `rotate(${Math.random() * 40 - 20}deg) scale(${Math.random() * 0.4 + 0.8})`;
 
-                    item.addEventListener('click', handleHuntClick);
-                    huntBoard.appendChild(item);
+                    fragment.appendChild(item);
                 }
+                huntBoard.appendChild(fragment);
+                huntBoard.addEventListener('click', handleHuntClick);
             }
-
 
             function handleHuntClick(e) {
                 const clickedItem = e.target.closest('.letter-hunt-item');
@@ -711,6 +724,7 @@
                 playSound('You did it!', 1);
                 huntCompleteMessage.innerHTML = `<p class="text-2xl font-bold text-green-600">You found them all!</p><button id="play-again-btn" class="nav-button mt-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-full">Play Again</button>`;
                 huntCompleteMessage.classList.remove('hidden');
+                huntBoard.removeEventListener('click', handleHuntClick); // Clean up listener
                 document.getElementById('play-again-btn').addEventListener('click', () => startHuntGame(huntMode));
                 celebrate();
             }

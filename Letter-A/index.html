@@ -143,14 +143,22 @@
             const letterData = {
                 letter: 'a',
                 sound: 'ah',
-                audioSrc: 'YOUR_LINK_HERE',
-                examples: [ // Belizean Context Examples
-                    { emoji: '🐜', name: 'ant',        startsWith: 'a' },
-                    { emoji: '🐊', name: 'alligator',  startsWith: 'a' },
-                    { emoji: '🏹', name: 'arrow',      startsWith: 'a' },
-                    { emoji: '💪', name: 'arm',        startsWith: 'a' },
-                    { emoji: '🐾', name: 'armadillo',  startsWith: 'a' }, // Using a paw print as a proxy
-                    { emoji: '🛋️', name: 'armchair',   startsWith: 'a' },
+                audioSrc: 'sounds/letter_a.mp3', // Placeholder for the main letter sound
+                examples: [
+                    { name: 'ant',       startsWith: 'a', emoji: '🐜', imageSrc: 'images/ant.png',       audioSrc: 'sounds/ant.mp3' },
+                    { name: 'alligator', startsWith: 'a', emoji: '🐊', imageSrc: 'images/alligator.png', audioSrc: 'sounds/alligator.mp3' },
+                    { name: 'arrow',     startsWith: 'a', emoji: '🏹', imageSrc: 'images/arrow.png',     audioSrc: 'sounds/arrow.mp3' },
+                    { name: 'arm',       startsWith: 'a', emoji: '💪', imageSrc: 'images/arm.png',       audioSrc: 'sounds/arm.mp3' },
+                    { name: 'armadillo', startsWith: 'a', emoji: '🐾', imageSrc: 'images/armadillo.png', audioSrc: 'sounds/armadillo.mp3' },
+                    { name: 'armchair',  startsWith: 'a', emoji: '🛋️', imageSrc: 'images/armchair.png',  audioSrc: 'sounds/armchair.mp3' },
+                ],
+                // Dummy letters for generating incorrect options in games
+                otherLetters: [
+                    { letter: 'b', sound: 'b', audioSrc: 'sounds/letter_b.mp3' },
+                    { letter: 'm', sound: 'm', audioSrc: 'sounds/letter_m.mp3' },
+                    { letter: 's', sound: 's', audioSrc: 'sounds/letter_s.mp3' },
+                    { letter: 't', sound: 't', audioSrc: 'sounds/letter_t.mp3' },
+                    { letter: 'p', sound: 'p', audioSrc: 'sounds/letter_p.mp3' },
                 ],
             };
 
@@ -245,7 +253,7 @@
             }
 
             function playAudioFile(url, volume = 1) {
-                if (!url || url === 'YOUR_LINK_HERE' || url === 'YOUR_TEACHER_AUDIO_LINK_HERE') {
+                if (!url || url.includes('YOUR_') || url.includes('.png')) { // Also check for placeholder image paths
                     console.warn('Audio URL is a placeholder or missing. Provide a valid link to play the sound.');
                     // As a fallback, we can use the synth voice to notify the user.
                     playSound('Teacher audio has not been set up yet.', volume);
@@ -332,14 +340,13 @@
             function generateSoundMatchExercise() {
                 exerciseTitle.textContent = "What sound does this start with?";
                 const correctAnswer = letterData;
-                const randomExample = correctAnswer.examples[Math.floor(Math.random() * correctAnswer.examples.length)];
-                exerciseImage.textContent = randomExample.emoji;
+                const randomExample = letterData.examples[Math.floor(Math.random() * letterData.examples.length)];
+                
+                exerciseImage.innerHTML = `<img src="${randomExample.imageSrc}" alt="${randomExample.name}" class="h-40 object-contain" onerror="this.parentNode.innerHTML='<span class=text-8xl>${randomExample.emoji}</span>';">`;
 
-                // For this game, we need other letters. Let's create some dummy ones.
-                const otherLetters = [{ letter: 'b', sound: 'b' }, { letter: 'm', sound: 'm' }, { letter: 's', sound: 's' }, { letter: 't', sound: 't' }, { letter: 'p', sound: 'p' }];
                 let options = [correctAnswer];
                 while (options.length < 4) {
-                    const randomLetter = otherLetters[Math.floor(Math.random() * otherLetters.length)];
+                    const randomLetter = letterData.otherLetters[Math.floor(Math.random() * letterData.otherLetters.length)];
                     if (!options.some(opt => opt.letter === randomLetter.letter)) options.push(randomLetter);
                 }
                 options.sort(() => Math.random() - 0.5); // Shuffle
@@ -516,9 +523,9 @@
                 huntMode = mode;
 
                 if (mode === 'capital') {
-                    playSound("Find the Capital letters");
+                    playSound("Find the capital letters");
                 } else {
-                    playSound("Find the small letters");
+                    playSound("Find the lower case letters");
                 }
 
                 huntCompleteMessage.classList.add('hidden');

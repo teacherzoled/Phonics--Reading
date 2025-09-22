@@ -89,6 +89,7 @@
         .letter-hunt-board {
             position: relative;
             perspective: 1000px;
+            contain: layout style; /* Optimization: tell browser this element's content doesn't affect outside layout */
         }
         .letter-hunt-item {
             position: absolute;
@@ -273,14 +274,21 @@
                 canvas.addEventListener('mouseup', stopDrawing);
                 canvas.addEventListener('mouseout', stopDrawing);
                 canvas.addEventListener('mousemove', draw);
-
+                
                 canvas.addEventListener('touchstart', startDrawing);
                 canvas.addEventListener('touchend', stopDrawing);
-                canvas.addEventListener('touchmove', draw);
+                // Optimize touchmove for better scrolling performance on some devices
+                canvas.addEventListener('touchmove', draw, { passive: false });
                 
-                window.addEventListener('resize', setupCanvas);
+                // Debounce resize event for performance
+                let resizeTimeout;
+                window.addEventListener('resize', () => {
+                    clearTimeout(resizeTimeout);
+                    resizeTimeout = setTimeout(setupCanvas, 150);
+                });
                 
                 nextExerciseButton.addEventListener('click', () => generateExercise(activeGame));
+                exerciseOptions.addEventListener('click', handlePracticeClick);
                 
                 tabs.addEventListener('click', (e) => {
                     if (e.target.classList.contains('tab-button')) {
@@ -289,14 +297,8 @@
                     }
                 });
 
-                findCapitalsBtn.addEventListener('click', () => {
-                    playSound("Find the Capital letters");
-                    startHuntGame('capital');
-                });
-                findLowersBtn.addEventListener('click', () => {
-                    playSound("Find the small letters");
-                    startHuntGame('lower');
-                });
+                findCapitalsBtn.addEventListener('click', () => startHuntGame('capital'));
+                findLowersBtn.addEventListener('click', () => startHuntGame('lower'));
             }
 
             function setActiveTab(tabName) {
@@ -338,7 +340,7 @@
                     button.textContent = game.name;
                     button.className = 'game-select-button nav-button bg-yellow-200 text-yellow-800 font-bold py-2 px-4 rounded-full';
                     button.dataset.game = game.id;
-                    button.addEventListener('click', () => {
+                    button.addEventListener('click', (e) => {
                         activeGame = game.id;
                         generateExercise(activeGame);
                     });
@@ -491,8 +493,9 @@
                     const card = document.createElement('div');
                     card.className = 'exercise-card bg-gray-100 p-4 rounded-2xl border-4 border-gray-200 flex items-center justify-center';
                     card.innerHTML = `<span class="text-6xl font-bold text-gray-700">${option.letter}</span>`;
-                    card.dataset.letter = option.letter;
-                    card.addEventListener('click', () => checkAnswer(card, option.letter, correctAnswer.letter, randomExample.name));
+                    card.dataset.correctLetter = correctAnswer.letter;
+                    card.dataset.letter = option.letter; // The letter this card represents
+                    card.dataset.exampleName = randomExample.name;
                     exerciseOptions.appendChild(card);
                 });
             }
@@ -520,14 +523,22 @@
                     
                     const colorClass = colors[index % colors.length];
                     card.innerHTML = `<span class="text-9xl font-bold ${colorClass}">${letter}</span>`;
+                    card.dataset.correctLetter = targetLetter;
                     card.dataset.letter = letter;
-
-                    card.addEventListener('click', () => {
-                        const isCorrect = card.dataset.letter === targetLetter;
-                        checkAnswer(card, card.dataset.letter, targetLetter);
-                    });
                     exerciseOptions.appendChild(card);
                 });
+            }
+
+            function handlePracticeClick(e) {
+                const selectedCard = e.target.closest('.exercise-card');
+                if (!selectedCard) return;
+
+                const selectedLetter = selectedCard.dataset.letter;
+                const correctLetter = selectedCard.dataset.correctLetter;
+                const exampleName = selectedCard.dataset.exampleName; // Will be undefined for 'find-letter' game
+
+                // The checkAnswer function will handle the rest
+                checkAnswer(selectedCard, selectedLetter, correctLetter, exampleName);
             }
 
             function handleFindLetterClick(item, targetLetter, onCorrect) {
@@ -602,6 +613,13 @@
 
             function startHuntGame(mode) {
                 huntMode = mode;
+
+                if (mode === 'capital') {
+                    playSound("Find the Capital letters");
+                } else {
+                    playSound("Find the small letters");
+                }
+
                 huntCompleteMessage.classList.add('hidden');
                 
                 findCapitalsBtn.classList.toggle('bg-blue-700', mode === 'capital');
@@ -629,6 +647,7 @@
                 huntBoard.innerHTML = '';
                 const boardRect = huntBoard.getBoundingClientRect();
                 const itemSize = 60; // Approximate size of a letter item in pixels
+                const fragment = document.createDocumentFragment();
 
                 for (const letter of lettersToHunt) {
                     const item = document.createElement('div');
@@ -659,10 +678,12 @@
                     item.classList.add(colors[Math.floor(Math.random() * colors.length)]);
                     item.style.transform = `rotate(${Math.random() * 40 - 20}deg) scale(${Math.random() * 0.4 + 0.8})`;
 
-                    item.addEventListener('click', handleHuntClick);
-                    huntBoard.appendChild(item);
+                    fragment.appendChild(item);
                 }
+                huntBoard.appendChild(fragment); // Append all at once
+                huntBoard.addEventListener('click', handleHuntClick);
             }
+
 
             function handleHuntClick(e) {
                 const clickedItem = e.target;
@@ -689,7 +710,9 @@
                 playSound('You did it!', 1);
                 huntCompleteMessage.innerHTML = `<p class="text-2xl font-bold text-green-600">You found them all!</p><button id="play-again-btn" class="nav-button mt-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-full">Play Again</button>`;
                 huntCompleteMessage.classList.remove('hidden');
+                huntBoard.removeEventListener('click', handleHuntClick); // Clean up listener
                 document.getElementById('play-again-btn').addEventListener('click', () => startHuntGame(huntMode));
+                celebrate();
             }
 
             // Initial call

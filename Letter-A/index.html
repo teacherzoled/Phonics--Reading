@@ -105,6 +105,12 @@
             transform: scale(0.8);
             opacity: 0;
         }
+        .activity-view {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: white;
+            padding: 1rem; /* p-4 */
+        }
     </style>
 </head>
 <body class="bg-blue-50 text-gray-800 flex items-center justify-center min-h-screen p-4">
@@ -115,23 +121,24 @@
             <p class="text-gray-500 text-lg">Learn letter sounds and practice writing.</p>
         </header>
 
-        <!-- Tabs -->
-        <div id="tabs" class="flex justify-center border-b-2 border-gray-200 mb-6 space-x-2">
-            <button data-tab="learn" class="tab-button text-lg sm:text-xl px-4 sm:px-6 py-3 font-bold text-gray-600 rounded-t-lg transition-colors duration-300">Learn & Trace</button>
-            <button data-tab="practice" class="tab-button text-lg sm:text-xl px-4 sm:px-6 py-3 font-bold text-gray-600 rounded-t-lg transition-colors duration-300">Practice Games</button>
-            <button data-tab="hunt" class="tab-button text-lg sm:text-xl px-4 sm:px-6 py-3 font-bold text-gray-600 rounded-t-lg transition-colors duration-300">Letter Hunt</button>
+        <!-- Main Menu -->
+        <div id="main-menu" class="flex flex-col items-center justify-center gap-4">
+            <button data-view="learn" class="menu-button w-full max-w-sm text-2xl bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-6 rounded-2xl shadow-lg">Learn & Trace</button>
+            <button data-view="practice" class="menu-button w-full max-w-sm text-2xl bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-4 px-6 rounded-2xl shadow-lg">Practice Games</button>
+            <button data-view="hunt" class="menu-button w-full max-w-sm text-2xl bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 px-6 rounded-2xl shadow-lg">Letter Hunt</button>
         </div>
 
         <main id="main-content">
             <!-- Learn & Trace View -->
-            <div id="learn-view" class="tab-content">
+            <div id="learn-view" class="activity-view hidden">
+                <button class="back-button absolute top-4 left-4 nav-button bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-full">&larr; Menu</button>
                 <div class="flex flex-col lg:flex-row items-center justify-around gap-8">
                     <!-- Left Side: Letter and Sound -->
                     <div class="flex flex-col items-center gap-4">
                         <div id="letter-display-container" class="w-64 h-64 bg-green-100 border-8 border-green-300 rounded-3xl flex items-center justify-center shadow-lg cursor-pointer">
                             <span id="letter-display" class="letter-display font-bold text-green-600">a</span>
                         </div>
-                        <button id="teacher-instructions-button" class="nav-button bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-8 rounded-full shadow-lg text-2xl flex items-center gap-3">
+                        <button id="teacher-instructions-button" class="nav-button bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-full shadow-lg text-xl flex items-center gap-3">
                             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
                             Teacher Instructions
                         </button>
@@ -163,7 +170,8 @@
             </div>
 
             <!-- Practice Games View -->
-            <div id="practice-view" class="tab-content hidden">
+            <div id="practice-view" class="activity-view hidden">
+                 <button class="back-button absolute top-4 left-4 nav-button bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-full">&larr; Menu</button>
                  <div id="game-selection" class="flex justify-center gap-4 mb-6">
                     <!-- Game selection buttons will be inserted here -->
                 </div>
@@ -178,7 +186,8 @@
             </div>
 
             <!-- Letter Hunt View -->
-            <div id="hunt-view" class="tab-content hidden">
+            <div id="hunt-view" class="activity-view hidden">
+                <button class="back-button absolute top-4 left-4 nav-button bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-full">&larr; Menu</button>
                 <div class="text-center">
                     <h2 class="text-3xl font-bold text-blue-600 mb-4">Letter Hunt!</h2>
                     <div id="hunt-mode-selection" class="flex justify-center gap-4 mb-6">
@@ -235,13 +244,14 @@
             const exerciseImage = document.getElementById('exercise-image');
             const exerciseOptions = document.getElementById('exercise-options');
             const nextExerciseButton = document.getElementById('next-exercise-button');
-            let findLetterCorrectCount = 0;
+            let findLetterCorrectCount = 0; // Counter for the 'find-letter' game
+            const celebrationThreshold = { 'sound-match': 3, 'find-letter': 5 }; // How many correct answers to trigger celebration
 
-            // Tabs
-            const tabs = document.getElementById('tabs');
+            // Views
+            const mainMenu = document.getElementById('main-menu');
             const learnView = document.getElementById('learn-view');
             const practiceView = document.getElementById('practice-view');
-            const huntView = document.getElementById('hunt-view');
+            const huntView = document.getElementById('hunt-view'); 
             let activeGame = 'sound-match';
 
             // Letter Hunt elements
@@ -250,6 +260,10 @@
             const findLowersBtn = document.getElementById('find-lowers-btn');
             const huntCompleteMessage = document.getElementById('hunt-complete-message');
             let huntMode = null; // 'capital' or 'lower'
+
+            // State for the sound-match game
+            const soundMatchGoal = 5; // How many correct matches to win
+            let soundMatchCorrectCount = 0;
             let targetCount = 0;
 
             function initialize() {
@@ -258,7 +272,7 @@
                 setupGameSelection();
                 setupEventListeners();
                 findLetterCorrectCount = 0; // Reset counter on init
-                setActiveTab('learn');
+                showView('menu');
             }
             
             function setupEventListeners() {
@@ -290,28 +304,33 @@
                 nextExerciseButton.addEventListener('click', () => generateExercise(activeGame));
                 exerciseOptions.addEventListener('click', handlePracticeClick);
                 
-                tabs.addEventListener('click', (e) => {
-                    if (e.target.classList.contains('tab-button')) {
-                        const tabName = e.target.dataset.tab;
-                        setActiveTab(tabName);
+                mainMenu.addEventListener('click', (e) => {
+                    const button = e.target.closest('.menu-button');
+                    if (button) {
+                        const viewName = button.dataset.view;
+                        showView(viewName);
                     }
+                });
+
+                document.querySelectorAll('.back-button').forEach(button => {
+                    button.addEventListener('click', () => showView('menu'));
                 });
 
                 findCapitalsBtn.addEventListener('click', () => startHuntGame('capital'));
                 findLowersBtn.addEventListener('click', () => startHuntGame('lower'));
             }
 
-            function setActiveTab(tabName) {
-                document.querySelectorAll('.tab-button').forEach(btn => {
-                    btn.classList.toggle('active', btn.dataset.tab === tabName);
-                });
-                document.querySelectorAll('.tab-content').forEach(content => {
-                    content.classList.toggle('hidden', content.id !== `${tabName}-view`);
-                });
-                if (tabName === 'practice') {
+            function showView(viewName) {
+                mainMenu.classList.toggle('hidden', viewName !== 'menu');
+                learnView.classList.toggle('hidden', viewName !== 'learn');
+                practiceView.classList.toggle('hidden', viewName !== 'practice');
+                huntView.classList.toggle('hidden', viewName !== 'hunt');
+
+                // Initialize game when view is shown
+                if (viewName === 'practice') {
                     findLetterCorrectCount = 0; // Reset counter when switching to practice tab
                     generateExercise(activeGame);
-                } else if (tabName === 'hunt') {
+                } else if (viewName === 'hunt') {
                     resetHuntGame();
                 }
             }
@@ -459,7 +478,8 @@
 
                 // Update active game button style
                 document.querySelectorAll('.game-select-button').forEach(btn => {
-                    btn.classList.toggle('bg-yellow-500', btn.dataset.game === gameType);
+                    const isActive = btn.dataset.game === gameType;
+                    btn.classList.toggle('bg-yellow-500', isActive);
                     if(btn.dataset.game === gameType) findLetterCorrectCount = 0; // Reset counter when switching game
                     btn.classList.toggle('text-white', btn.dataset.game === gameType);
                     btn.classList.toggle('bg-yellow-200', btn.dataset.game !== gameType);
@@ -469,6 +489,20 @@
                 if (gameType === 'sound-match') {
                     generateSoundMatchExercise();
                 } else if (gameType === 'find-letter') {
+                    generateFindLetterExercise();
+                }
+
+                // Reset counter if the game type changes
+                if (gameType !== activeGame) {
+                    correctInARow = 0;
+                    generateFindLetterExercise();
+                }
+
+                if (gameType === 'sound-match') {
+                    soundMatchCorrectCount = 0;
+                    generateSingleSoundMatch();
+                } else if (gameType === 'find-letter') {
+                    findLetterCorrectCount = 0;
                     generateFindLetterExercise();
                 }
             }
@@ -500,7 +534,35 @@
                 });
             }
 
+            function generateSingleSoundMatch() {
+                exerciseTitle.textContent = `Match ${soundMatchCorrectCount} of ${soundMatchGoal}`;
+                const correctAnswer = letterData;
+                const randomExample = correctAnswer.examples[Math.floor(Math.random() * correctAnswer.examples.length)];
+                exerciseImage.textContent = randomExample.emoji;
+
+                // For this game, we need other letters. Let's create some dummy ones.
+                const otherLetters = [{ letter: 'b', sound: 'b' }, { letter: 'm', sound: 'm' }, { letter: 's', sound: 's' }, { letter: 't', sound: 't' }, { letter: 'p', sound: 'p' }];
+                let options = [correctAnswer];
+                while (options.length < 4) {
+                    const randomLetter = otherLetters[Math.floor(Math.random() * otherLetters.length)];
+                    if (!options.some(opt => opt.letter === randomLetter.letter)) options.push(randomLetter);
+                }
+                options.sort(() => Math.random() - 0.5); // Shuffle
+
+                exerciseOptions.innerHTML = '';
+                options.forEach(option => {
+                    const card = document.createElement('div');
+                    card.className = 'exercise-card bg-gray-100 p-4 rounded-2xl border-4 border-gray-200 flex items-center justify-center';
+                    card.innerHTML = `<span class="text-6xl font-bold text-gray-700">${option.letter}</span>`;
+                    card.dataset.correctLetter = correctAnswer.letter;
+                    card.dataset.letter = option.letter; // The letter this card represents
+                    card.dataset.exampleName = randomExample.name;
+                    exerciseOptions.appendChild(card);
+                });
+            }
+
             function generateFindLetterExercise() {
+                exerciseTitle.textContent = `Find ${findLetterCorrectCount} of 5`;
                 const isFindingCapital = Math.random() > 0.5;
                 const instructionText = isFindingCapital ? `Click on the capital ${letterData.sound}` : `Click on the lowercase ${letterData.sound}`;
                 const titleText = isFindingCapital ? "Click on the capital A" : "Click on the lowercase a";
@@ -574,15 +636,27 @@
                         findLetterCorrectCount++;
                         if (findLetterCorrectCount >= 5) {
                             celebrate();
-                            findLetterCorrectCount = 0; // Reset counter
+                            exerciseTitle.textContent = "You found them all!";
+                            nextExerciseButton.textContent = "Start Over";
+                            nextExerciseButton.classList.remove('hidden');
+                        } else {
+                            setTimeout(() => generateFindLetterExercise(), 1500);
                         }
-                        // Automatically go to the next question after a short delay
-                        setTimeout(() => generateExercise('find-letter'), 1500);
-                    } else {
-                        // For the sound-match game, automatically go to the next question
-                        setTimeout(() => generateExercise('sound-match'), 1500);
+                    } else { // sound-match game
+                        soundMatchCorrectCount++;
+                        if (soundMatchCorrectCount >= soundMatchGoal) {
+                            // Game won!
+                            celebrate();
+                            exerciseTitle.textContent = "Great job! You matched them all!";
+                            nextExerciseButton.textContent = "Start Over";
+                            nextExerciseButton.classList.remove('hidden');
+                        } else {
+                            // Go to the next question
+                            setTimeout(() => generateSingleSoundMatch(), 1500);
+                        }
                     }
                 } else {
+                    findLetterCorrectCount = 0; // Reset counter on incorrect answer
                     playSound('Try again', 1);
                     selectedCard.classList.add('incorrect');
                     // Highlight the correct answer

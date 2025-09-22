@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Learn the Letter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Comic Neue', cursive;
+        }
+        .letter-display {
+            font-size: 10rem;
+            line-height: 1;
+        }
+        .nav-button {
+            transition: transform 0.1s ease-in-out;
+        }
+        .nav-button:active {
+            transform: scale(0.9);
+        }
+    </style>
+</head>
+<body class="bg-blue-50 text-gray-800 flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-4xl mx-auto bg-white rounded-3xl shadow-2xl p-4 sm:p-8 relative">
+        <a href="index.html" class="absolute top-4 left-4 nav-button bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-full">&larr; Menu</a>
+        
+        <div class="text-center mb-6">
+            <h2 class="text-3xl font-bold text-green-600 mb-4">Learn the Letter 'A'</h2>
+        </div>
+
+        <div class="flex flex-col items-center justify-center gap-8">
+            <div id="letter-display-container" class="w-64 h-64 bg-green-100 border-8 border-green-300 rounded-3xl flex items-center justify-center shadow-lg cursor-pointer">
+                <span id="letter-display" class="letter-display font-bold text-green-600">a</span>
+            </div>
+            <button id="teacher-instructions-button" class="nav-button bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-full shadow-lg text-lg sm:text-xl flex items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                Teacher Instructions
+            </button>
+            <div class="flex items-center justify-center mt-4 gap-4">
+                <span class="text-2xl font-bold text-gray-500">a</span>
+                <label for="case-toggle" class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" value="" id="case-toggle" class="sr-only peer">
+                    <div class="w-14 h-8 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-orange-500"></div>
+                </label>
+                <span class="text-2xl font-bold text-gray-500">A</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const letterData = {
+                letter: 'a',
+                sound: 'ah',
+                audioSrc: 'YOUR_LINK_HERE',
+            };
+
+            let isUppercase = false;
+            const synth = window.speechSynthesis;
+
+            const letterDisplay = document.getElementById('letter-display');
+            const letterDisplayContainer = document.getElementById('letter-display-container');
+            const teacherInstructionsButton = document.getElementById('teacher-instructions-button');
+            const caseToggle = document.getElementById('case-toggle');
+
+            function initialize() {
+                updateLetter();
+                setupEventListeners();
+            }
+
+            function setupEventListeners() {
+                letterDisplayContainer.addEventListener('click', playLetterSoundWithCase);
+                teacherInstructionsButton.addEventListener('click', () => playAudioFile('YOUR_TEACHER_AUDIO_LINK_HERE'));
+                caseToggle.addEventListener('change', () => {
+                    isUppercase = caseToggle.checked;
+                    updateLetter();
+                });
+            }
+
+            function updateLetter() {
+                const currentLetter = isUppercase ? letterData.letter.toUpperCase() : letterData.letter.toLowerCase();
+                letterDisplay.textContent = currentLetter;
+                playSound(letterData.sound, 0.5);
+            }
+
+            function playLetterSoundWithCase() {
+                const caseText = isUppercase ? `Capital ${letterData.sound}` : `small ${letterData.sound}`;
+                playSound(`${letterData.sound}, ${caseText}.`);
+            }
+
+            function playAudioFile(url, volume = 1) {
+                if (!url || url.startsWith('YOUR_')) {
+                    console.warn('Audio URL is a placeholder. Using synth fallback.');
+                    playSound('Teacher audio has not been set up yet.', volume);
+                    return;
+                }
+                const audio = new Audio(url);
+                audio.volume = volume;
+                audio.play().catch(e => console.error("Error playing audio file:", e));
+            }
+
+            function playSound(soundText, volume = 1, rate = 0.8) {
+                if (synth.speaking) synth.cancel();
+                const utterance = new SpeechSynthesisUtterance(soundText);
+                utterance.lang = 'en-US';
+                utterance.volume = volume;
+                utterance.rate = rate;
+                const voices = synth.getVoices();
+                const englishVoice = voices.find(voice => voice.lang.startsWith('en') && voice.name.includes('Google'));
+                if (englishVoice) utterance.voice = englishVoice;
+                synth.speak(utterance);
+            }
+
+            if (synth.getVoices().length === 0) {
+                synth.onvoiceschanged = initialize;
+            } else {
+                initialize();
+            }
+        });
+    </script>
+</body>
+</html>

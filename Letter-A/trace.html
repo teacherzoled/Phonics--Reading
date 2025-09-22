@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Letter Tracing Fun</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@700&display=swap" rel="stylesheet">
+    <style>
+        html, body {
+            height: 100%;
+            overflow: hidden; /* Prevent scrolling on the whole page */
+        }
+        body {
+            font-family: 'Comic Neue', cursive;
+            touch-action: none; /* Disable scroll/zoom gestures globally */
+        }
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            border-radius: 1.5rem;
+            overflow: hidden;
+        }
+        #tracing-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            cursor: crosshair;
+            z-index: 10;
+        }
+        .trace-letter {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 35vmin; /* Responsive font size based on viewport */
+            color: #e5e7eb; /* gray-200 */
+            z-index: 5;
+            pointer-events: none; /* Allows drawing over the letter */
+            user-select: none;
+        }
+        .nav-button {
+            transition: transform 0.1s ease-in-out;
+        }
+        .nav-button:active {
+            transform: scale(0.9);
+        }
+    </style>
+</head>
+<body class="bg-blue-50 text-gray-800 flex flex-col items-center justify-center p-4">
+
+    <div id="app-container" class="w-full h-full max-w-4xl mx-auto bg-white rounded-3xl shadow-2xl p-4 sm:p-6 flex flex-col">
+        <!-- Header & Controls -->
+        <header class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
+            <a href="index.html" class="nav-button bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-full self-start">&larr; Back to Menu</a>
+            
+            <!-- Case Toggle -->
+            <div class="flex items-center justify-center gap-4 order-first sm:order-none w-full sm:w-auto">
+                <span class="text-2xl font-bold text-gray-500">a</span>
+                <label for="case-toggle" class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" value="" id="case-toggle" class="sr-only peer">
+                    <div class="w-14 h-8 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-orange-500"></div>
+                </label>
+                <span class="text-2xl font-bold text-gray-500">A</span>
+            </div>
+
+            <button id="clear-button" class="nav-button bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-full text-lg flex items-center gap-2 self-end">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+                Clear
+            </button>
+        </header>
+
+        <!-- Main Tracing Area -->
+        <main class="flex-grow w-full">
+            <div class="canvas-container bg-white border-8 border-gray-300 shadow-inner">
+                <span id="trace-letter-bg" class="trace-letter">a</span>
+                <canvas id="tracing-canvas"></canvas>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            let isUppercase = false;
+
+            // Elements
+            const traceLetterBg = document.getElementById('trace-letter-bg');
+            const caseToggle = document.getElementById('case-toggle');
+            const clearButton = document.getElementById('clear-button');
+            const canvasContainer = document.querySelector('.canvas-container');
+            const canvas = document.getElementById('tracing-canvas');
+            const ctx = canvas.getContext('2d');
+            let isDrawing = false;
+
+            function initialize() {
+                setupCanvas();
+                updateLetter();
+                setupEventListeners();
+            }
+
+            function setupEventListeners() {
+                clearButton.addEventListener('click', clearCanvas);
+                caseToggle.addEventListener('change', () => {
+                    isUppercase = caseToggle.checked;
+                    updateLetter();
+                });
+
+                // Drawing Listeners
+                canvas.addEventListener('mousedown', startDrawing);
+                canvas.addEventListener('mouseup', stopDrawing);
+                canvas.addEventListener('mouseout', stopDrawing);
+                canvas.addEventListener('mousemove', draw);
+                
+                canvas.addEventListener('touchstart', startDrawing, { passive: false });
+                canvas.addEventListener('touchend', stopDrawing, { passive: false });
+                canvas.addEventListener('touchmove', draw, { passive: false });
+                
+                // Debounce resize event for performance
+                let resizeTimeout;
+                window.addEventListener('resize', () => {
+                    clearTimeout(resizeTimeout);
+                    resizeTimeout = setTimeout(setupCanvas, 150);
+                });
+            }
+
+            function updateLetter() {
+                const currentLetter = isUppercase ? 'A' : 'a';
+                traceLetterBg.textContent = currentLetter;
+                clearCanvas();
+            }
+
+            // Canvas Functions
+            function setupCanvas() {
+                const { width, height } = canvasContainer.getBoundingClientRect();
+                canvas.width = width;
+                canvas.height = height;
+                ctx.strokeStyle = '#f97316'; // orange-500
+                ctx.lineWidth = 20;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+            }
+
+            function getPosition(e) {
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                
+                const touch = e.touches && e.touches.length > 0 ? e.touches[0] : e;
+
+                return {
+                    x: (touch.clientX - rect.left) * scaleX,
+                    y: (touch.clientY - rect.top) * scaleY
+                };
+            }
+
+            function startDrawing(e) {
+                e.preventDefault();
+                isDrawing = true;
+                const { x, y } = getPosition(e);
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+            }
+
+            function stopDrawing(e) {
+                e.preventDefault();
+                isDrawing = false;
+                ctx.beginPath();
+            }
+
+            function draw(e) {
+                if (!isDrawing) return;
+                e.preventDefault();
+                const { x, y } = getPosition(e);
+                ctx.lineTo(x, y);
+                ctx.stroke();
+            }
+
+            function clearCanvas() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+
+            initialize();
+        });
+    </script>
+
+</body>
+</html>

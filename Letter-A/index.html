@@ -579,8 +579,8 @@
                         // Automatically go to the next question after a short delay
                         setTimeout(() => generateExercise('find-letter'), 1500);
                     } else {
-                        // For the sound-match game, show the next button
-                        nextExerciseButton.classList.remove('hidden');
+                        // For the sound-match game, automatically go to the next question
+                        setTimeout(() => generateExercise('sound-match'), 1500);
                     }
                 } else {
                     playSound('Try again', 1);
@@ -591,7 +591,8 @@
                             c.classList.add('correct');
                         }
                     });
-                    nextExerciseButton.classList.remove('hidden');
+                    // After an incorrect answer, automatically load the next question after a delay
+                    setTimeout(() => generateExercise(activeGame), 2000);
                 }
             }
 
@@ -613,9 +614,6 @@
                 findCapitalsBtn.classList.remove('bg-blue-700');
                 findLowersBtn.classList.remove('bg-blue-700');
                 huntMode = null;
-                // Clean up event listener when the game is reset
-                const newBoard = huntBoard.cloneNode(true);
-                huntBoard.parentNode.replaceChild(newBoard, huntBoard);
             }
 
             function startHuntGame(mode) {
@@ -633,13 +631,12 @@
                 findLowersBtn.classList.toggle('bg-blue-700', mode === 'lower');
 
                 // Use setTimeout to allow the UI to update before heavy calculation
-                // This prevents the app from freezing on mobile when a mode is selected.
-                setTimeout(() => generateHuntBoard(mode), 0);
+                // This also ensures the board is rendered before we get its dimensions.
+                setTimeout(() => generateHuntBoard(mode), 50); // A small delay is safer
             }
 
             function generateHuntBoard(mode) {
-                const lettersToHunt = [];
-                const positions = [];
+                const lettersToHunt = []; 
                 const totalLetters = 30;
                 const targetLetter = mode === 'capital' ? 'A' : 'a';
                 const otherLetter = mode === 'capital' ? 'a' : 'A';
@@ -658,33 +655,37 @@
                 lettersToHunt.sort(() => Math.random() - 0.5);
 
                 huntBoard.innerHTML = '';
-                const boardRect = huntBoard.getBoundingClientRect();
-                const itemSize = 60; // Approximate size of a letter item in pixels
                 const fragment = document.createDocumentFragment();
+
+                // --- Grid-based positioning to prevent freezing ---
+                const cols = 6; // 6 columns
+                const rows = 5; // 5 rows
+                const boardRect = huntBoard.getBoundingClientRect(); // Measure the board *after* it's visible
+                const cellWidth = boardRect.width / cols;
+                const cellHeight = boardRect.height / rows;
+                let gridPositions = [];
+                for(let i = 0; i < cols * rows; i++) {
+                    gridPositions.push(i);
+                }
+                gridPositions.sort(() => Math.random() - 0.5); // Shuffle grid positions
+                // --- End of new positioning logic ---
 
                 for (const letter of lettersToHunt) {
                     const item = document.createElement('div');
                     item.textContent = letter;
                     item.className = 'letter-hunt-item text-5xl font-bold flex items-center justify-center';
                     item.dataset.letter = letter;
-
-                    // Generate non-overlapping random positions
-                    let top, left, isOverlapping;
-                    do {
-                        isOverlapping = false;
-                        top = Math.random() * (boardRect.height - itemSize);
-                        left = Math.random() * (boardRect.width - itemSize);
-                        for (const pos of positions) {
-                            if (Math.sqrt(Math.pow(pos.left - left, 2) + Math.pow(pos.top - top, 2)) < itemSize * 0.8) {
-                                isOverlapping = true;
-                                break;
-                            }
-                        }
-                    } while (isOverlapping);
-                    positions.push({ top, left });
-
-                    item.style.top = `${top}px`;
+                    
+                    // Place item in a random grid cell
+                    const gridIndex = gridPositions.pop();
+                    const col = gridIndex % cols;
+                    const row = Math.floor(gridIndex / cols);
+                    
+                    // Add a little randomness within the cell
+                    const left = col * cellWidth + (Math.random() * cellWidth * 0.1);
+                    const top = row * cellHeight + (Math.random() * cellHeight * 0.1);
                     item.style.left = `${left}px`;
+                    item.style.top = `${top}px`;
 
                     // Add some visual variety
                     const colors = ['text-blue-500', 'text-green-500', 'text-purple-500', 'text-orange-500', 'text-pink-500'];

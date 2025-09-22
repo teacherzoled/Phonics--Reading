@@ -35,7 +35,7 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 50vmin; /* Increased responsive font size */
+            font-size: clamp(10rem, 75vmin, 30rem); /* Min, Preferred, Max font size */
             color: #e5e7eb; /* gray-200 */
             z-index: 5;
             pointer-events: none; /* Allows drawing over the letter */
@@ -47,6 +47,21 @@
         .nav-button:active {
             transform: scale(0.9);
         }
+        .trace-guide-svg {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 6; /* Above the letter, below the canvas */
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+        .trace-guide-svg.visible {
+            opacity: 1;
+        }
+        .trace-guide-svg .stroke-arrow {
+            fill: #f97316; /* orange-500 */
+        }
         #completion-message {
             transition: opacity 0.5s ease-in-out;
         }
@@ -56,29 +71,53 @@
 
     <div id="app-container" class="w-full h-full max-w-4xl mx-auto bg-white rounded-3xl shadow-2xl p-4 sm:p-6 flex flex-col">
         <!-- Header & Controls -->
-        <header class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
-            <a href="index.html" class="nav-button bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-full self-start">&larr; Back to Menu</a>
-            
-            <!-- Case Toggle -->
-            <div class="flex items-center justify-center gap-4 order-first sm:order-none w-full sm:w-auto">
-                <span class="text-2xl font-bold text-gray-500">a</span>
-                <label for="case-toggle" class="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" value="" id="case-toggle" class="sr-only peer">
-                    <div class="w-14 h-8 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-orange-500"></div>
-                </label>
-                <span class="text-2xl font-bold text-gray-500">A</span>
+        <header class="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4 items-center">
+            <div class="flex justify-start">
+                <a href="index.html" class="nav-button bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-full">&larr; Menu</a>
+            </div>
+            <div class="col-span-2 sm:col-span-1 flex justify-center sm:justify-center order-first sm:order-none">
+                <div class="flex items-center justify-center gap-4">
+                    <span class="text-2xl font-bold text-gray-500">a</span>
+                    <label for="case-toggle" class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" value="" id="case-toggle" class="sr-only peer">
+                        <div class="w-14 h-8 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-orange-500"></div>
+                    </label>
+                    <span class="text-2xl font-bold text-gray-500">A</span>
+                </div>
             </div>
 
-            <button id="clear-button" class="nav-button bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-full text-lg flex items-center gap-2 self-end">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
-                Clear
-            </button>
+            <div class="flex justify-end col-span-2 sm:col-span-1 sm:col-start-3 gap-2">
+                 <button id="hint-button" class="nav-button bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-full text-lg flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M6.5 13a.5.5 0 0 1-.5-.5v-2.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v2.5a.5.5 0 0 1-.5.5h-3z"/><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zM.5 8a7.5 7.5 0 1 1 15 0A7.5 7.5 0 0 1 .5 8z"/><path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.11.248-.247V5.3s1.54-1.274 1.64-1.274c.104 0 .104.16.104.304v.348a.237.237 0 0 0 .247.247h.825c.138 0 .248-.11.248-.247V5.3s1.54-1.274 1.64-1.274c.104 0 .104.16.104.304v.348a.237.237 0 0 0 .247.247h.825c.138 0 .248-.11.248-.247V4.91c0-.507-1.027-1.156-1.64-1.156-.613 0-.954.446-.954.865 0 .318.232.616.232.616s-1.54-1.274-1.64-1.274c-.104 0-.954.446-.954.865 0 .318.232.616.232.616s-1.54-1.274-1.64-1.274c-.613 0-.954.446-.954.865v.876z"/></svg>
+                    Hint
+                </button>
+                <button id="clear-button" class="nav-button bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-full text-lg flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"/></svg>
+                    Clear
+                </button>
+            </div>
         </header>
 
         <!-- Main Tracing Area -->
         <main class="flex-grow w-full">
             <div class="canvas-container bg-white border-8 border-gray-300 shadow-inner">
                 <span id="trace-letter-bg" class="trace-letter">a</span>
+                <!-- SVG Guide for lowercase 'a' -->
+                <svg id="guide-a" class="trace-guide-svg" viewBox="0 0 100 100">
+                    <text x="30" y="40" font-size="12" fill="#f97316">1</text>
+                    <path class="stroke-arrow" d="M 68 47 L 62 42 L 68 37 Z"></path>
+                    <text x="30" y="85" font-size="12" fill="#f97316">2</text>
+                    <path class="stroke-arrow" d="M 75 80 L 70 86 L 65 80 Z"></path>
+                </svg>
+                <!-- SVG Guide for uppercase 'A' -->
+                <svg id="guide-A" class="trace-guide-svg" viewBox="0 0 100 100">
+                    <text x="20" y="30" font-size="12" fill="#f97316">1</text>
+                    <path class="stroke-arrow" d="M 50 20 L 45 26 L 55 26 Z"></path>
+                    <text x="80" y="30" font-size="12" fill="#f97316">2</text>
+                    <path class="stroke-arrow" d="M 50 20 L 45 26 L 55 26 Z"></path>
+                    <text x="30" y="65" font-size="12" fill="#f97316">3</text>
+                    <path class="stroke-arrow" d="M 75 60 L 70 55 L 70 65 Z"></path>
+                </svg>
                 <div id="completion-message" class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 opacity-0 pointer-events-none z-20">
                     <p class="text-white text-4xl font-bold">Great Job!</p>
                 </div>
@@ -95,10 +134,13 @@
             const traceLetterBg = document.getElementById('trace-letter-bg');
             const caseToggle = document.getElementById('case-toggle');
             const clearButton = document.getElementById('clear-button');
+            const hintButton = document.getElementById('hint-button');
             const canvasContainer = document.querySelector('.canvas-container');
             const canvas = document.getElementById('tracing-canvas');
             const completionMessage = document.getElementById('completion-message');
             const ctx = canvas.getContext('2d');
+            const guideA = document.getElementById('guide-a');
+            const guideAUpper = document.getElementById('guide-A');
             let isDrawing = false;
             let hasCelebrated = false;
 
@@ -111,6 +153,10 @@
 
             function setupEventListeners() {
                 clearButton.addEventListener('click', clearCanvas);
+                hintButton.addEventListener('click', () => {
+                    const guide = isUppercase ? guideAUpper : guideA;
+                    guide.classList.toggle('visible');
+                });
                 caseToggle.addEventListener('change', () => {
                     isUppercase = caseToggle.checked;
                     updateLetter();
@@ -138,6 +184,8 @@
                 const currentLetter = isUppercase ? 'A' : 'a';
                 traceLetterBg.textContent = currentLetter;
                 hasCelebrated = false;
+                guideA.classList.remove('visible');
+                guideAUpper.classList.remove('visible');
                 clearCanvas();
             }
 
